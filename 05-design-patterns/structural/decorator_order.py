@@ -38,7 +38,7 @@ class BaseOrder(OrderComponent):
 
 
 class OrderDecorator(OrderComponent, ABC):
-    """Holds the wrapped order. `_order` is protected so subclasses can use it (slide 87)."""
+    """Holds the wrapped order. `_order` is protected so subclasses can use it."""
 
     def __init__(self, order: OrderComponent):
         self._order = order

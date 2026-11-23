@@ -1,6 +1,5 @@
-"""Slides 61-64: abstract base classes vs Protocols.
+"""Abstract base classes vs Protocols, with shapes.
 
-My own example (not one of the gist problems): shapes.
 - `Shape` is an ABC: you can't create it, and subclasses MUST implement area().
 - `Drawable` is a Protocol: no inheritance needed, any object with draw() fits.
 """

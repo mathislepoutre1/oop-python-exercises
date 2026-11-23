@@ -1,7 +1,4 @@
-"""OOP problems: operator overloading.
-
-Exercise: https://gist.github.com/bdallard/b2f2c910e3a9b564a30c86991c97b4fc
-"""
+"""OOP problems: operator overloading."""
 from __future__ import annotations
 
 import math

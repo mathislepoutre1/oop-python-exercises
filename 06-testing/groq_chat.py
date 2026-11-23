@@ -1,7 +1,4 @@
-"""Small Groq wrapper from the course (Mocking section).
-
-The client can be injected: that's what makes the function testable without a real API call.
-"""
+"""Small Groq wrapper. The client can be passed in, so tests can use a fake one."""
 from __future__ import annotations
 
 from groq import Groq

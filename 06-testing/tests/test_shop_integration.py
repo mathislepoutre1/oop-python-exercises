@@ -33,5 +33,5 @@ class TestIntegrationOrderService:
         assert order_service.place_order("HAT", 1)["error"] == "Not enough stock"
 
     def test_zero_quantity_rejected(self, order_service):
-        # Bug found while testing: the course version "sold" 0 items for 0 €
+        # bug found while testing: an order of 0 items used to succeed
         assert order_service.place_order("MUG", 0) == {"success": False, "error": "Quantity must be positive"}

@@ -1,8 +1,4 @@
-"""Mocking the Groq API (slide 93 + course Mocking section).
-
-Rule: mock what you don't own (the API), test what you own (the request we send,
-input validation, error propagation). No network, no API key, no tokens burnt.
-"""
+"""Tests for ask_groq with a fake Groq client (no real API call)."""
 import os
 
 import pytest

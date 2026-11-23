@@ -1,7 +1,4 @@
-"""E-commerce demo app from the course page (used to practise the testing pyramid).
-
-https://courses.dallard.tech/ci_cd/testing_python_intro/
-"""
+"""Small e-commerce app used for the testing exercises."""
 from __future__ import annotations
 
 
@@ -56,7 +53,7 @@ class OrderService:
         self.repo = repo
 
     def place_order(self, sku: str, quantity: int) -> dict:
-        if quantity <= 0:  # added: the course version accepted 0 or negative quantities
+        if quantity <= 0:  # added: 0 or negative quantities were accepted before
             return {"success": False, "error": "Quantity must be positive"}
         product = self.repo.get_product(sku)
         if product is None:

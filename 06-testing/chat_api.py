@@ -1,10 +1,9 @@
-"""FastAPI chat endpoint backed by Groq (slide 93 example, made testable).
+"""FastAPI chat endpoint backed by Groq.
 
-What I changed compared to the slide:
-- the Groq client comes from a FastAPI dependency (`Depends(get_client)`), so tests can swap
-  it for a mock with `app.dependency_overrides`; and the app can start without an API key
-- the API key is read from the GROQ_API_KEY environment variable, never written in the code
-- each Groq error is turned into a proper HTTP status (500 / 429 / 503)
+- the Groq client comes from a FastAPI dependency (`Depends(get_client)`), so tests can
+  replace it with a mock
+- the API key is read from the GROQ_API_KEY environment variable
+- each Groq error is turned into an HTTP status (500 / 429 / 503)
 
 Run it (from this folder):  uvicorn chat_api:app --reload   with GROQ_API_KEY set
 """
