@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+.venv/
+venv/
+
+# Secrets: never commit API keys
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Files generated when running the exercises
+*.log
+05-design-patterns/behavioral/output/

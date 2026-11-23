@@ -1,0 +1,24 @@
+[project]
+name = "oop-python-exercises"
+version = "1.0.0"
+description = "Exercises for the OOP & Design Patterns in Python course"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+# Each exercise folder is its own little project: put them on the import path
+# so tests can do `from operator_overloading import Vector`.
+pythonpath = [
+    "03-oop",
+    "04-uml/hospital",
+    "04-uml/abcd_records",
+    "05-design-patterns/creational",
+    "05-design-patterns/structural",
+    "05-design-patterns/behavioral",
+    "06-testing",
+]
+testpaths = ["03-oop", "04-uml", "05-design-patterns", "06-testing"]
+addopts = "--import-mode=importlib"
+markers = [
+    "slow: tests that take time (would hit a real API)",
+    "fast: quick tests with no I/O",
+]
