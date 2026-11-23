@@ -1,68 +1,52 @@
-# 05 · Design patterns
+# 05 - Design patterns
 
-> Slides 70-87. Exercises: [creational](https://courses.dallard.tech/sys_design/creational_pattern/) · [structural](https://courses.dallard.tech/sys_design/structural_pattern/) · [behavioral](https://courses.dallard.tech/sys_design/behavioral_pattern/)
+Each file starts with the problems of the original code, then the refactored version. Running a file shows the expected usage.
 
-For every exercise, as the course asks, I:
-1. listed the problems of the spaghetti code (in the docstring at the top of each file),
-2. drew the UML class diagram **before** coding (below),
-3. refactored, and checked the "expected usage" from the course works (`__main__` of each file),
-4. proved it's extensible by adding a new variant without touching the existing classes.
-
-| Type | Pattern | Exercise | File | Extension added |
-|---|---|---|---|---|
-| Creational | Factory | Payment system | [`creational/factory_payment.py`](creational/factory_payment.py) | `CryptoProcessor` via `register()` |
-| Creational | Builder | HR employee onboarding | [`creational/builder_employee.py`](creational/builder_employee.py) | `DeveloperBuilder`, `InternBuilder` presets |
-| Creational | Singleton | Config manager | [`creational/singleton_config.py`](creational/singleton_config.py) | thread-safe + `set()` shared by all modules |
-| Structural | Adapter | XML → JSON reports | [`structural/adapter_report.py`](structural/adapter_report.py) | real XML parsing (no "cheating" with the original dict) |
-| Structural | Decorator | Order pricing | [`structural/decorator_order.py`](structural/decorator_order.py) | `PremiumMemberDecorator` *is a* `DiscountDecorator` |
-| Behavioral | Strategy | Report formats | [`behavioral/strategy_report.py`](behavioral/strategy_report.py) | `HTMLFormatStrategy`, `MarkdownFormatStrategy` |
-| Behavioral | Template Method | ETL pipelines | [`behavioral/template_etl.py`](behavioral/template_etl.py) | `XMLPipeline` + hooks |
+- `creational/factory_payment.py`: Factory (payment system)
+- `creational/builder_employee.py`: Builder (employee onboarding)
+- `creational/singleton_config.py`: Singleton (config manager)
+- `structural/adapter_report.py`: Adapter (XML report to JSON)
+- `structural/decorator_order.py`: Decorator (order pricing)
+- `behavioral/strategy_report.py`: Strategy (report formats)
+- `behavioral/template_etl.py`: Template Method (ETL pipelines)
 
 ```bash
-python 05-design-patterns/creational/factory_payment.py   # any file runs on its own
-pytest 05-design-patterns                                 # 39 tests
+python creational/factory_payment.py
 ```
 
----
+## Factory
 
-## Factory: payment system
-
-`if/elif` on `payment_type` → one class per provider + a registry dict. The shared `process()` (validate → fee → result) is written once in the base class.
+The big if/elif is replaced by one class per payment method and a factory that uses a dict to find the right class. I added a crypto payment with `register()` without changing the other classes.
 
 ```mermaid
 classDiagram
     class PaymentProcessor {
         <<abstract>>
-        +method: str
-        +validate(details)* bool
-        +compute_fee(amount)* float
+        +validate(details) bool
+        +compute_fee(amount) float
         +process(amount, details) dict
     }
     class CreditCardProcessor
     class BankTransferProcessor
     class PayPalProcessor
-    class CryptoProcessor
     class PaymentFactory {
-        -_registry: dict~str, type~$
-        +register(name, cls)$
-        +available()$ list
-        +get_processor(payment_type) PaymentProcessor
+        -_registry: dict
+        +register(name, cls)
+        +get_processor(payment_type)
     }
     PaymentProcessor <|-- CreditCardProcessor
     PaymentProcessor <|-- BankTransferProcessor
     PaymentProcessor <|-- PayPalProcessor
-    PaymentProcessor <|-- CryptoProcessor
     PaymentFactory ..> PaymentProcessor : creates
 ```
 
-## Builder: employee onboarding
+## Builder
 
-17 positional parameters → chainable `with_*()` methods that return `self`. All the validation happens in `build()`, which returns a **frozen** dataclass. Presets encode business rules (a developer always gets admin + VPN).
+The function with 17 parameters is replaced by methods you can chain. Validation is done in `build()`. `DeveloperBuilder` and `InternBuilder` are presets.
 
 ```mermaid
 classDiagram
     class Employee {
-        <<dataclass frozen>>
         +first_name
         +last_name
         +email
@@ -70,20 +54,14 @@ classDiagram
         +position
         +salary
         +has_laptop
-        +has_vpn_access
         +has_admin_rights
-        +contract_type
-        +full_name() str
     }
     class EmployeeBuilder {
-        -_data: dict
-        +with_name(first, last) EmployeeBuilder
-        +with_email(email) EmployeeBuilder
-        +with_job(dept, position, salary) EmployeeBuilder
-        +with_equipment(laptop, parking) EmployeeBuilder
-        +with_access(vpn, admin) EmployeeBuilder
-        +reporting_to(manager_id) EmployeeBuilder
-        +with_contract(type) EmployeeBuilder
+        +with_name(first, last)
+        +with_email(email)
+        +with_job(dept, position, salary)
+        +with_equipment(laptop, parking)
+        +with_access(vpn, admin)
         +build() Employee
     }
     class DeveloperBuilder
@@ -93,28 +71,25 @@ classDiagram
     EmployeeBuilder ..> Employee : builds
 ```
 
-## Singleton: config manager
+## Singleton
 
-`load_config()` read the file 4 times → `ConfigManager.get_instance()` reads it once (the demo prints `File read 1 time(s) for 4 modules`). I added a lock for threads, `reset()` for tests, and `get("a.b.c")` for nested keys.
+The config file used to be read 4 times. Now `ConfigManager.get_instance()` reads it once and always returns the same object. `get("database.host")` reads nested values.
 
 ```mermaid
 classDiagram
     class ConfigManager {
-        -_instance: ConfigManager$
-        -_lock: Lock$
+        -_instance: ConfigManager
         -_config: dict
-        +load_count: int
-        +get_instance(path)$ ConfigManager
-        +reset()$
-        +get(key, default) Any
+        +get_instance() ConfigManager
+        +get(key, default)
         +set(key, value)
+        +reset()
     }
-    ConfigManager --> ConfigManager : _instance
 ```
 
-## Adapter: legacy XML → JSON dashboard
+## Adapter
 
-The original code didn't really convert anything: it called `json.dumps` on the dict it already had. My adapter parses the XML coming out of the legacy library (with `xml.etree`) and restores the number types.
+The old generator returns XML and can't be changed. `LegacyReportAdapter` wraps it and converts the XML to JSON for the dashboard.
 
 ```mermaid
 classDiagram
@@ -123,24 +98,19 @@ classDiagram
         +generate(data) str
     }
     class LegacyReportAdapter {
-        -_legacy: LegacyReportGenerator
+        -_legacy
         +generate(data) str
-        -_xml_to_dict(xml) dict
     }
     class LegacyReportGenerator {
         +generate_report(data) str
     }
-    class AnalyticsDashboard {
-        +display(json_data)
-    }
     ReportGeneratorInterface <|.. LegacyReportAdapter
-    LegacyReportAdapter o--> LegacyReportGenerator : wraps
-    AnalyticsDashboard ..> ReportGeneratorInterface : JSON from
+    LegacyReportAdapter o--> LegacyReportGenerator
 ```
 
-## Decorator: order pricing
+## Decorator
 
-5 boolean flags → stackable wrappers. The order you wrap them in is the order of the calculation (a test shows that discount-then-shipping ≠ shipping-then-discount). Same total as the original code: **95.625 €**.
+The 5 boolean flags are replaced by decorators that wrap the order. The order of the wrapping is the order of the calculation.
 
 ```mermaid
 classDiagram
@@ -149,24 +119,18 @@ classDiagram
         +get_cost() float
         +get_description() str
     }
-    class BaseOrder {
-        +base_price
-    }
+    class BaseOrder
     class OrderDecorator {
-        <<abstract>>
-        #_order: OrderComponent
-        +base_price() float
+        #_order
     }
     class ExpressShippingDecorator
     class InsuranceDecorator
     class GiftWrapDecorator
-    class DiscountDecorator {
-        +percent
-    }
+    class DiscountDecorator
     class PremiumMemberDecorator
     OrderComponent <|.. BaseOrder
     OrderComponent <|.. OrderDecorator
-    OrderDecorator o--> OrderComponent : wraps
+    OrderDecorator o--> OrderComponent
     OrderDecorator <|-- ExpressShippingDecorator
     OrderDecorator <|-- InsuranceDecorator
     OrderDecorator <|-- GiftWrapDecorator
@@ -174,15 +138,15 @@ classDiagram
     DiscountDecorator <|-- PremiumMemberDecorator
 ```
 
-## Strategy: report formats
+## Strategy
 
-Two parallel `if/elif` chains → one class per format. Each class knows its text **and** its file extension, so `save_report()` has no `if` left. HTML and Markdown were added without editing anything else.
+One class per format instead of the if/elif chains. The format can be changed with `set_strategy()`. I added HTML without changing the other classes.
 
 ```mermaid
 classDiagram
     class FormatStrategy {
         <<interface>>
-        +extension: str
+        +extension
         +format(data) str
     }
     class PDFFormatStrategy
@@ -190,36 +154,31 @@ classDiagram
     class CSVFormatStrategy
     class JSONFormatStrategy
     class HTMLFormatStrategy
-    class MarkdownFormatStrategy
     class ReportGenerator {
-        +data: list
-        -_strategy: FormatStrategy
+        -_strategy
         +set_strategy(strategy)
         +generate_report() str
-        +save_report(filename) Path
+        +save_report(filename)
     }
     FormatStrategy <|.. PDFFormatStrategy
     FormatStrategy <|.. ExcelFormatStrategy
     FormatStrategy <|.. CSVFormatStrategy
     FormatStrategy <|.. JSONFormatStrategy
     FormatStrategy <|.. HTMLFormatStrategy
-    FormatStrategy <|.. MarkdownFormatStrategy
-    ReportGenerator o--> "1" FormatStrategy
+    ReportGenerator o--> FormatStrategy
 ```
 
-## Template Method: ETL pipelines
+## Template Method
 
-3 copy-pasted `run()` methods → one `run()` in the base class. Subclasses only write `extract()` + `transform()` + `required_keys`. `cleanup()` is in a `finally`, so it runs even when validation fails. `XMLPipeline` uses the `before_run`/`after_run` hooks to time itself.
+`run()` is written once in the base class and calls the steps in order. Each pipeline only writes `extract()` and `transform()`. I added `XMLPipeline` to check it works.
 
 ```mermaid
 classDiagram
     class DataPipeline {
         <<abstract>>
-        +source_type: str
-        +required_keys: tuple
         +run() str
-        +extract()* list
-        +transform(data)* list
+        +extract() list
+        +transform(data) list
         +connect()
         +validate()
         +load()
@@ -230,23 +189,9 @@ classDiagram
     class CSVPipeline
     class APIPipeline
     class DatabasePipeline
-    class XMLPipeline {
-        +before_run()
-        +after_run()
-    }
+    class XMLPipeline
     DataPipeline <|-- CSVPipeline
     DataPipeline <|-- APIPipeline
     DataPipeline <|-- DatabasePipeline
     DataPipeline <|-- XMLPipeline
 ```
-
-## When to use which (slide 86)
-
-| Smell in the code | Pattern |
-|---|---|
-| lots of `if/elif` on a type | Strategy / Factory |
-| function with 10+ parameters | Builder |
-| same config loaded everywhere | Singleton |
-| two systems that don't speak the same format | Adapter |
-| options stacked with boolean flags | Decorator |
-| copy-pasted classes with the same steps | Template Method |

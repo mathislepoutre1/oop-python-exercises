@@ -1,24 +1,18 @@
-# Exo 2 · ABCD Records 📼
+# Exo 2 - ABCD Records
 
-> https://gist.github.com/bdallard/2d2407c4de4c182afca6d3ec7235e9eb
+The final model is coded in `abcd_records.py`.
 
-Mermaid has no real use-case diagram, so I draw them as flowcharts:
-- 🧍 nodes = **actors**
-- rounded nodes = **use cases**
-- the box = **system boundary**
-- dotted arrows = `<<include>>` / `<<extend>>`
-
-The final model is implemented in [`abcd_records.py`](abcd_records.py) and tested in [`../tests/test_abcd_records.py`](../tests/test_abcd_records.py).
+Mermaid has no use case diagram, so I drew them as flowcharts (the box is the system, dotted arrows are include/extend).
 
 ## Level 1
 
-### 1.1 Use case diagram
+### Use case diagram
 
 ```mermaid
 flowchart LR
-    M["🧍 Member"]
-    C["🧍 Order Processing Clerk"]
-    subgraph ABCD["ABCD Records system"]
+    M["Member"]
+    C["Order Processing Clerk"]
+    subgraph ABCD["ABCD Records"]
         PO([Place Order])
         VM([Verify Membership])
         PR([Process Order])
@@ -30,7 +24,7 @@ flowchart LR
     C --- PR
 ```
 
-### 1.2 Class diagram
+### Class diagram
 
 ```mermaid
 classDiagram
@@ -60,17 +54,17 @@ classDiagram
 
 ## Level 2
 
-### 2.1 Complete use case diagram
+### Use case diagram
 
 ```mermaid
 flowchart LR
-    M["🧍 Member"]
-    RM["🧍 Royal Member"]
-    NM["🧍 Non-Member"]
-    OC["🧍 Order Processing Clerk"]
-    CC["🧍 Collection Dept. Clerk"]
+    M["Member"]
+    RM["Royal Member"]
+    NM["Non-Member"]
+    OC["Order Processing Clerk"]
+    CC["Collection Clerk"]
 
-    subgraph ABCD["ABCD Records system"]
+    subgraph ABCD["ABCD Records"]
         PO([Place Order])
         VM([Verify Membership])
         SA([Send Membership Application])
@@ -89,21 +83,20 @@ flowchart LR
     NM --- PO
     OC --- PR
     CC --- MP
-
-    PO -. "&lt;&lt;include&gt;&gt;" .-> VM
-    SA -. "&lt;&lt;extend&gt;&gt; (not a member)" .-> VM
-    PR -. "&lt;&lt;include&gt;&gt;" .-> VA
-    PR -. "&lt;&lt;include&gt;&gt;" .-> PI
-    PR -. "&lt;&lt;include&gt;&gt;" .-> PS
-    AD -. "&lt;&lt;extend&gt;&gt; (Royal)" .-> PR
-    OU -. "&lt;&lt;extend&gt;&gt; (Royal, out of stock)" .-> VA
     RM --- OU
+
+    PO -. include .-> VM
+    SA -. extend .-> VM
+    PR -. include .-> VA
+    PR -. include .-> PI
+    PR -. include .-> PS
+    AD -. extend .-> PR
+    OU -. extend .-> VA
 ```
 
-- **include** = always happens. Placing an order *always* verifies membership, and processing *always* checks availability and prints the invoice and shipping list.
-- **extend** = only sometimes. The application form is sent *only* to non-members, the discount *only* applies to Royal members, and unavailable items are ordered *only* for Royal members.
+Include = always happens (placing an order always checks membership). Extend = only in some cases (the application form is only sent to non-members, the discount is only for Royal members).
 
-### 2.2 Complete class diagram
+### Class diagram
 
 ```mermaid
 classDiagram
@@ -115,9 +108,8 @@ classDiagram
     class Member {
         <<abstract>>
         +member_id
-        +discount_rate* float
-        +has_priority* bool
-        +can_order_unavailable* bool
+        +discount_rate
+        +can_order_unavailable
     }
     class RegularMember
     class RoyalMember
@@ -126,19 +118,15 @@ classDiagram
     Member <|-- RegularMember
     Member <|-- RoyalMember
 
-    class MembershipApplication {
-        +sent_on
-    }
+    class MembershipApplication
     NonMember "1" -- "0..1" MembershipApplication : receives
 
     class Item {
         <<abstract>>
         +code
         +title
-        +artist
         +price
         +stock
-        +is_available(qty) bool
     }
     class CD
     class Tape
@@ -148,15 +136,11 @@ classDiagram
     class Order {
         +id
         +placed_on
-        +status
-        +gross_total()
-        +discount()
         +total()
     }
     class OrderLine {
         +quantity
-        +backordered: bool
-        +subtotal()
+        +backordered
     }
     Member "1" -- "0..*" Order : places
     Order "1" *-- "1..*" OrderLine
@@ -165,49 +149,25 @@ classDiagram
     class Invoice {
         +amount
         +paid
-        +print()
     }
-    class ShippingList {
-        +lines_to_ship()
-        +print()
-    }
+    class ShippingList
     Order "1" -- "1" Invoice
     Order "1" -- "1" ShippingList
 
     class Payment {
         <<abstract>>
         +amount
-        +describe()* str
     }
     class CashPayment
-    class CheckPayment {
-        +check_number
-        +bank
-    }
-    class BankDraftPayment {
-        +draft_number
-    }
+    class CheckPayment
+    class BankDraftPayment
     Payment <|-- CashPayment
     Payment <|-- CheckPayment
     Payment <|-- BankDraftPayment
-    Invoice "1" -- "0..1" Payment : settled by
-
-    class OrderProcessingClerk {
-        +verify_membership(customer) Member
-        +process(order) (Invoice, ShippingList)
-    }
-    class CollectionClerk {
-        +collect(invoice, payment)
-    }
-    class DailyRecords {
-        +save(order)
-    }
-    OrderProcessingClerk ..> Order : processes
-    OrderProcessingClerk --> DailyRecords : writes to
-    CollectionClerk ..> Payment : handles
+    Invoice "1" -- "0..1" Payment : paid by
 ```
 
-**Scenario: a Royal member orders 2 CDs (one unavailable) and pays by check.** This is the `__main__` of `abcd_records.py`:
+Scenario: a Royal member orders 2 CDs, one is out of stock, and pays by check. Output of `python abcd_records.py`:
 
 ```
 INVOICE ORD-0001 - Mathis
@@ -223,9 +183,9 @@ Back-orders: ['Abbey Road']
 Received 29.70€ check n°0012345 (BNP) for ORD-0001
 ```
 
-## Level 3: Sequence diagrams
+## Level 3 - Sequence diagrams
 
-### 1. Complete order processing flow
+### Order processing
 
 ```mermaid
 sequenceDiagram
@@ -233,81 +193,61 @@ sequenceDiagram
     participant OC as OrderProcessingClerk
     participant I as Item
     participant R as DailyRecords
-    actor CC as CollectionClerk
-    M->>OC: place order (items)
+    M->>OC: place order
     OC->>OC: verify_membership(member)
-    loop each order line
+    loop each item
         OC->>I: is_available(qty)
         alt in stock
-            I-->>OC: true
-            OC->>I: stock -= qty
+            OC->>I: remove from stock
         else out of stock and Royal
-            OC->>OC: mark back-ordered, add to reorders
+            OC->>OC: mark as back-ordered
         end
     end
     OC->>R: save(order)
-    OC-->>M: Invoice + ShippingList
-    M->>CC: payment
-    CC-->>M: receipt
+    OC-->>M: invoice + shipping list
 ```
 
-### 2. Membership verification (success and failure)
+### Membership verification
 
 ```mermaid
 sequenceDiagram
     actor C as Customer
     participant OC as OrderProcessingClerk
     C->>OC: place order
-    OC->>OC: verify_membership(customer)
-    alt customer is a Member
+    alt is a member
         OC-->>C: order accepted
-    else customer is a NonMember
-        OC->>OC: create MembershipApplication
-        OC-->>C: MembershipError + application form
+    else not a member
+        OC-->>C: membership application form
     end
 ```
 
-### 3. Payment processing (all types)
+### Payment
 
 ```mermaid
 sequenceDiagram
     actor M as Member
     participant CC as CollectionClerk
-    participant P as Payment
     participant INV as Invoice
-    M->>CC: collect(invoice, payment)
-    CC->>INV: already paid?
-    alt amount matches and not paid
-        alt Cash
-            CC->>P: CashPayment.describe()
-        else Check
-            CC->>P: CheckPayment.describe() (number, bank)
-        else Bank draft
-            CC->>P: BankDraftPayment.describe() (draft number)
-        end
-        CC->>INV: paid = True
+    M->>CC: payment (cash, check or bank draft)
+    alt right amount and not paid yet
+        CC->>INV: mark as paid
         CC-->>M: receipt
     else wrong amount or already paid
         CC-->>M: error
     end
 ```
 
-### 4. Item reordering for Royal members
+### Reordering for Royal members
 
 ```mermaid
 sequenceDiagram
     actor RM as RoyalMember
     participant OC as OrderProcessingClerk
-    participant I as Item
     participant S as Supplier
     RM->>OC: order item X
-    OC->>I: is_available(qty)
-    I-->>OC: false
-    OC->>RM: can_order_unavailable?
-    RM-->>OC: true (Royal)
-    OC->>OC: line.backordered = True
-    OC->>S: reorder item X
-    Note over OC,RM: invoice is issued now, X is shipped when it arrives
-    S-->>OC: item X delivered
-    OC-->>RM: ship item X (priority)
+    OC->>OC: X is out of stock
+    OC->>OC: Royal member, so mark X as back-ordered
+    OC->>S: reorder X
+    S-->>OC: X delivered
+    OC-->>RM: ship X
 ```

@@ -1,10 +1,8 @@
-# Exo 1 · Hospital Management System 🏥
+# Exo 1 - Hospital Management System
 
-> https://gist.github.com/bdallard/2d2407c4de4c182afca6d3ec7235e9eb
+The final model (task 3) is coded in `hospital.py`.
 
-All diagrams are written in [Mermaid](https://mermaid.js.org/), so GitHub renders them directly. The final model (Task 3) is implemented in [`hospital.py`](hospital.py) and tested in [`../tests/test_hospital.py`](../tests/test_hospital.py).
-
-## Task 1: Basic class diagram
+## Task 1 - Class diagram
 
 ```mermaid
 classDiagram
@@ -40,9 +38,9 @@ classDiagram
     Organizer "1" --> "0..*" Patient : registers
 ```
 
-*Who talks to whom?* The patient never talks to the doctor directly: the **Organizer** sits in the middle of every exchange.
+The patient never talks to the doctor directly, everything goes through the organizer.
 
-## Task 2: Full class diagram (6 classes)
+## Task 2 - Class diagram with the 6 classes
 
 ```mermaid
 classDiagram
@@ -98,10 +96,9 @@ classDiagram
     Organizer "1" -- "0..*" HealthProblem : handles
 ```
 
-- **Composition** (filled diamond): a `HealthProblem` only exists inside a patient's file, and a `Prescription` only exists as the answer to a problem.
-- At this step the payment type is an **enumeration**. In Task 3 it becomes a class hierarchy (polymorphism).
+I used composition because a health problem belongs to one patient and a prescription only exists for one problem.
 
-### Sequence: a patient submits a problem, gets a prescription and pays
+Sequence diagram: a patient submits a problem, gets a prescription and pays.
 
 ```mermaid
 sequenceDiagram
@@ -109,26 +106,20 @@ sequenceDiagram
     participant O as Organizer
     participant D as Doctor
     P->>O: submitProblem("Headache")
-    activate O
     O->>D: consult(problem)
-    activate D
     D-->>O: Prescription
-    deactivate D
     O-->>P: deliver(prescription)
-    deactivate O
     P->>O: pay(prescription, CreditCard)
-    activate O
     O->>D: forwardPayment(amount)
-    deactivate O
 ```
 
-## Task 3: Advanced model
+## Task 3 - Advanced
 
-Changes from Task 2:
-- a `User` superclass holds `id`, `name`, `password` and `login/logout`
-- `PaymentMethod` is an abstract class, and each payment type implements `charge()` its own way (Strategy pattern)
-- `ProblemStatus`: pending → in-review → resolved
-- timestamps everywhere, and every prescription keeps a reference to the patient's previous prescriptions
+Changes:
+- a `User` superclass with id, name, password, login and logout
+- payment types are classes that inherit from `PaymentMethod`
+- `HealthProblem` has a status: pending, in-review, resolved
+- timestamps, and each prescription keeps the patient's previous prescriptions
 
 ```mermaid
 classDiagram
@@ -137,28 +128,21 @@ classDiagram
         +id: str
         +name: str
         -password_hash: str
-        +logged_in: bool
         +login(password) bool
         +logout()
-        +role* str
     }
     class Patient {
         +email: str
-        +problems: list~HealthProblem~
-        +inbox: list~Prescription~
         +submit_problem(description) HealthProblem
         +pay(prescription, method) Payment
-        +past_prescriptions() list
     }
     class Doctor {
         +specialty: str
         +fee: float
-        +earnings: float
         +write_prescription(problem, text) Prescription
         +receive_payment(amount)
     }
     class Organizer {
-        +members: dict
         +register_patient(name, email)
         +register_doctor(name, specialty, fee)
         +consult(problem, doctor)
@@ -179,34 +163,29 @@ classDiagram
         +id
         +description
         +status: ProblemStatus
-        +created_at: datetime
+        +created_at
     }
     class Prescription {
         +id
         +text
         +fee
-        +created_at: datetime
-        +previous: list~Prescription~
+        +created_at
+        +previous: list
     }
     class Payment {
         +id
         +amount
-        +status: PaymentStatus
+        +status
         +paid_at
-        +forwarded_at
-        +process() Payment
+        +process()
     }
     class PaymentMethod {
         <<abstract>>
-        +charge(amount)* str
+        +charge(amount) str
     }
     class Cash
-    class Check {
-        +check_number
-    }
-    class CreditCard {
-        +last4
-    }
+    class Check
+    class CreditCard
     PaymentMethod <|-- Cash
     PaymentMethod <|-- Check
     PaymentMethod <|-- CreditCard
@@ -217,26 +196,22 @@ classDiagram
     HealthProblem "1" *-- "0..1" Prescription
     HealthProblem "0..*" --> "0..1" Doctor : assigned to
     Doctor "1" -- "0..*" Prescription : writes
-    Prescription "0..*" --> "0..*" Prescription : previous
-    Payment "0..1" --> "1" Prescription : for
+    Payment --> Prescription : for
     Payment --> PaymentMethod : uses
 ```
 
-### SSD 1: Patient registration
+### Patient registration
 
 ```mermaid
 sequenceDiagram
     actor O as Organizer
     participant S as System
     O->>S: register_patient(name, email)
-    S->>S: generate id + random password
-    S->>S: store hash of the password
-    S-->>O: (patient, password)
-    O-->>O: send credentials to the patient
-    Note over S: the plain password is never stored
+    S->>S: create id and password
+    S-->>O: patient + password
 ```
 
-### SSD 2: Consultation flow
+### Consultation
 
 ```mermaid
 sequenceDiagram
@@ -244,43 +219,36 @@ sequenceDiagram
     participant S as System
     actor O as Organizer
     actor D as Doctor
-    P->>S: login(password)
     P->>S: submit_problem(description)
-    S-->>P: problem (status = pending)
+    S-->>P: problem (pending)
     O->>S: consult(problem, doctor)
-    S-->>D: problem assigned (status = in-review)
+    S-->>D: problem (in-review)
     D->>S: write_prescription(problem, text)
-    S-->>O: prescription ready
     O->>S: deliver(prescription)
-    S-->>P: prescription (status = resolved)
+    S-->>P: prescription (resolved)
 ```
 
-### SSD 3: Payment processing
+### Payment
 
 ```mermaid
 sequenceDiagram
     actor P as Patient
     participant S as System
-    participant M as PaymentMethod
     actor O as Organizer
     actor D as Doctor
     P->>S: pay(prescription, method)
-    S->>M: charge(fee)
-    alt payment accepted
-        M-->>S: receipt
-        S-->>P: payment (status = paid)
+    alt payment ok
+        S-->>P: payment (paid)
         O->>S: forward_payment(payment)
         S->>D: receive_payment(fee)
-        S-->>O: payment (status = forwarded)
-    else invalid card / check bounced
-        M-->>S: error
-        S-->>P: payment refused
+    else payment refused
+        S-->>P: error
     end
 ```
 
-## Questions to consider
+## Questions
 
-1. **A patient consulting several doctors?** Each `HealthProblem` gets its own assigned `Doctor`, so a patient with 3 problems can see 3 different doctors. To get a second opinion on *one* problem, I'd turn `HealthProblem → Doctor` into a list of `Consultation(doctor, problem, opinion)` objects (an association class).
-2. **Should prescriptions be reusable?** Not by copying the same object: a prescription is a medical record linked to a date, a doctor and a problem. For a renewal, I'd create a **new** `Prescription` that points to the old one (`previous`). The history is kept and nothing gets overwritten.
-3. **Design pattern for payments?** The **Strategy** pattern: `PaymentMethod` is the interface, and `Cash`/`Check`/`CreditCard` are interchangeable strategies, so a new type (PayPal…) means a new class and no change to `Payment`. A **Factory** could build the right method from a string sent by the web form.
-4. **Data integrity for payments?** `Payment` is a small state machine (`created → paid → forwarded`) that refuses double processing and double forwarding. The amount comes from the prescription's fee, never from the patient. Only the last 4 digits of the card are stored. In a real system the "pay + update status" step would run in a single database transaction.
+1. Multiple doctors: each problem has its own doctor, so a patient can see a different doctor for each problem.
+2. Reusable prescriptions: I don't reuse the same object. For a renewal I create a new prescription that points to the old one, so the history is kept.
+3. Design pattern for payments: Strategy. Each payment type is a class with its own `charge()`, so adding a new one doesn't change the rest.
+4. Data integrity: a payment can only go created -> paid -> forwarded, it can't be paid or forwarded twice, and the amount comes from the prescription, not from the patient.
